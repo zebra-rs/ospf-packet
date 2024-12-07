@@ -157,6 +157,7 @@ impl Display for OspfLsa {
         match &self.lsa {
             Router(v) => write!(f, "\n{}", v),
             Network(v) => write!(f, "\n{}", v),
+            AsExternal(v) => write!(f, "\n{}", v),
             Unknown(_v) => write!(f, "Unknown"),
         }
     }
@@ -182,7 +183,7 @@ impl Display for RouterLsaLink {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(
             f,
-            r#"== Router LSA ==
+            r#"== Router LSA Link ==
  Link ID: {}
  Link Data: {}
  Link Type: {}
@@ -206,6 +207,21 @@ impl Display for NetworkLsa {
             r#"== Network LSA ==
   Netmask: {}"#,
             self.network_mask
+        )?;
+        // for link in self.links.iter() {
+        //     write!(f, "\n{}", link)?;
+        // }
+        Ok(())
+    }
+}
+
+impl Display for AsExternalLsa {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(
+            f,
+            r#"== AS External LSA ==
+  Forwarding Address: {}"#,
+            self.forwarding_address
         )?;
         // for link in self.links.iter() {
         //     write!(f, "\n{}", link)?;

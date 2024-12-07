@@ -1,7 +1,7 @@
 use std::net::Ipv4Addr;
 
 use nom::error::{make_error, ErrorKind};
-use nom::number::complete::be_u64;
+use nom::number::complete::{be_u24, be_u64};
 use nom::{Err, IResult};
 use nom_derive::*;
 
@@ -149,7 +149,8 @@ pub enum OspfLsaPayload {
     Network(NetworkLsa),
     // Summary(SummaryLsa),
     // SummaryAsbr(SummaryAsbrLsa),
-    // AsExternal(AsExternalLsa),
+    #[nom(Selector = "OspfLsType(OSPF_LSA_AS_EXTERNAL)")]
+    AsExternal(AsExternalLsa),
     // NssaAsExternal(NssaAsExternalLsa),
     // OpaqueLink(OpaqueLinkLsa),
     // OpaqueArea(OpaqueAreaLsa),
@@ -160,6 +161,7 @@ pub enum OspfLsaPayload {
 
 impl OspfLsaPayload {
     pub fn parse_lsa(input: &[u8], typ: OspfLsType) -> IResult<&[u8], Self> {
+        println!("XX LSA Type {:?}", typ.0);
         OspfLsaPayload::parse_be(input, typ)
     }
 }
@@ -197,6 +199,16 @@ pub struct RouterLsaLink {
 pub struct NetworkLsa {
     pub network_mask: Ipv4Addr,
     pub attached_routers: Vec<u32>,
+}
+
+#[derive(Debug, NomBE)]
+pub struct AsExternalLsa {
+    pub network_mask: Ipv4Addr,
+    pub ext_and_resvd: u8,
+    #[nom(Parse = "be_u24")]
+    pub metric: u32,
+    pub forwarding_address: Ipv4Addr,
+    pub external_route_tag: u32,
 }
 
 #[derive(Debug, NomBE)]
