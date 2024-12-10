@@ -1,11 +1,17 @@
 use std::net::Ipv4Addr;
 
+use bitfield_struct::bitfield;
+use byteorder::{BigEndian, ByteOrder};
+use bytes::{BufMut, BytesMut};
 use nom::error::{make_error, ErrorKind};
-use nom::number::complete::{be_u24, be_u64};
+use nom::number::complete::{be_u24, be_u64, be_u8};
 use nom::{Err, IResult};
 use nom_derive::*;
 
 use crate::util::ParseBe;
+
+// OSPF version.
+const OSPF_VERSION: u8 = 2;
 
 // OSPF packet types.
 const OSPF_HELLO: u8 = 1;
@@ -33,7 +39,46 @@ pub struct Ospfv2Packet {
     pub payload: Ospfv2Payload,
 }
 
-#[derive(Debug)]
+impl Ospfv2Packet {
+    pub fn new(router_id: &Ipv4Addr, area_id: &Ipv4Addr, payload: Ospfv2Payload) -> Self {
+        Self {
+            version: OSPF_VERSION,
+            typ: OspfPacketType(payload.typ()),
+            len: 0,
+            router_id: *router_id,
+            area_id: *area_id,
+            checksum: 0,
+            auth_type: 0,
+            auth: Ospfv2Auth::default(),
+            payload,
+        }
+    }
+
+    pub fn emit(&self, buf: &mut BytesMut) {
+        use Ospfv2Payload::*;
+        buf.put_u8(self.version);
+        buf.put_u8(self.typ.0);
+        buf.put_u16(self.len);
+        buf.put(&self.router_id.octets()[..]);
+        buf.put(&self.area_id.octets()[..]);
+        buf.put_u16(self.checksum);
+        buf.put_u16(self.auth_type);
+        self.auth.emit(buf);
+        match &self.payload {
+            Hello(v) => v.emit(buf),
+            // DbDesc(v) => v.emit(buf),
+            // LsRequest(v) => v.emit(buf),
+            // LsUpdate(v) => v.emit(buf),
+            // LsAck(v) => v.emit(buf),
+            _ => {}
+        }
+        // OSPF packet length.
+        let len = buf.len() as u16;
+        BigEndian::write_u16(&mut buf[2..4], len);
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct Ospfv2Auth {
     pub auth: u64,
 }
@@ -46,6 +91,10 @@ impl Ospfv2Auth {
         }
         let (input, auth) = be_u64(input)?;
         Ok((input, Self { auth }))
+    }
+
+    pub fn emit(&self, buf: &mut BytesMut) {
+        buf.put_u64(self.auth);
     }
 }
 
@@ -64,15 +113,67 @@ pub enum Ospfv2Payload {
     LsAck(OspfLsAck),
 }
 
+impl Ospfv2Payload {
+    pub fn typ(&self) -> u8 {
+        use Ospfv2Payload::*;
+        match self {
+            Hello(_) => OSPF_HELLO,
+            DbDesc(_) => OSPF_DATABASE_DESC,
+            LsRequest(_) => OSPF_LINK_STATE_REQUEST,
+            LsUpdate(_) => OSPF_LINK_STATE_UPDATE,
+            LsAck(_) => OSPF_LINK_STATE_ACK,
+        }
+    }
+}
+
 #[derive(Debug, NomBE)]
 pub struct OspfHello {
     pub network_mask: Ipv4Addr,
     pub hello_interval: u16,
-    pub options: u8,
+    #[nom(Map = "|x: u8| x.into()", Parse = "be_u8")]
+    pub options: HelloOption,
     pub router_priority: u8,
     pub router_dead_interval: u32,
     pub designated_router: Ipv4Addr,
     pub backup_designated_router: Ipv4Addr,
+}
+
+#[bitfield(u8, debug = true)]
+pub struct HelloOption {
+    pub multi_toplogy: bool,
+    pub external: bool,
+    pub multicast: bool,
+    pub nssa: bool,
+    pub lls_data: bool,
+    pub demand_circuts: bool,
+    pub o: bool,
+    pub dn: bool,
+}
+
+impl Default for OspfHello {
+    fn default() -> Self {
+        Self {
+            network_mask: Ipv4Addr::UNSPECIFIED,
+            hello_interval: 0,
+            options: HelloOption(0),
+            router_priority: 0,
+            router_dead_interval: 0,
+            designated_router: Ipv4Addr::UNSPECIFIED,
+            backup_designated_router: Ipv4Addr::UNSPECIFIED,
+        }
+    }
+}
+
+impl OspfHello {
+    pub fn emit(&self, buf: &mut BytesMut) {
+        buf.put(&self.network_mask.octets()[..]);
+        buf.put_u16(self.hello_interval);
+        buf.put_u8(self.options.into());
+        buf.put_u8(self.router_priority);
+        buf.put_u32(self.router_dead_interval);
+        buf.put(&self.designated_router.octets()[..]);
+        buf.put(&self.backup_designated_router.octets()[..]);
+    }
 }
 
 #[derive(Debug, NomBE)]
@@ -117,7 +218,7 @@ pub const OSPF_LSA_SUMMARY_NETWORK: u8 = 3;
 pub const OSPF_LSA_SUMMARY_ASBR: u8 = 4;
 pub const OSPF_LSA_AS_EXTERNAL: u8 = 5;
 pub const OSPF_LSA_NSSA_AS_EXTERNAL: u8 = 7;
-pub const OPSF_LSA_OPAQUE_LINK_LOCAL: u8 = 9;
+pub const OSPF_LSA_OPAQUE_LINK_LOCAL: u8 = 9;
 pub const OSPF_LSA_OPAQUE_AREA_LOCAL: u8 = 10;
 pub const OSPF_LSA_OPAQUE_AS_WIDE: u8 = 11;
 

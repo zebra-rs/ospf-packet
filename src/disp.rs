@@ -55,7 +55,7 @@ impl Display for OspfHello {
             r#"== Hello ==
  Network mask: {}
  Hello interval: {}
- Options: {}
+ Options: {:?}
  Router priority: {}
  Router dead interval: {}
  DR: {}
