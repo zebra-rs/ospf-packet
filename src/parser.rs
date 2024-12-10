@@ -3,6 +3,7 @@ use std::net::Ipv4Addr;
 use bitfield_struct::bitfield;
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{BufMut, BytesMut};
+use internet_checksum::Checksum;
 use nom::error::{make_error, ErrorKind};
 use nom::number::complete::{be_u24, be_u64, be_u8};
 use nom::{Err, IResult};
@@ -75,6 +76,12 @@ impl Ospfv2Packet {
         // OSPF packet length.
         let len = buf.len() as u16;
         BigEndian::write_u16(&mut buf[2..4], len);
+
+        // Update checksum.
+        const CHECKSUM_RANGE: std::ops::Range<usize> = 12..14;
+        let mut cksum = Checksum::new();
+        cksum.add_bytes(buf);
+        buf[CHECKSUM_RANGE].copy_from_slice(&cksum.checksum());
     }
 }
 
@@ -317,7 +324,22 @@ pub struct UnknownLsa {
     pub data: Vec<u8>,
 }
 
+pub fn validate_checksum(input: &[u8]) -> IResult<&[u8], ()> {
+    const AUTH_RANGE: std::ops::Range<usize> = 16..24;
+
+    let mut cksum = Checksum::new();
+    cksum.add_bytes(&input[0..AUTH_RANGE.start]);
+    cksum.add_bytes(&input[AUTH_RANGE.end..]);
+    if cksum.checksum() != [0; 2] {
+        println!("Error {:?}", cksum.checksum());
+        Err(Err::Error(make_error(input, ErrorKind::Verify)))
+    } else {
+        Ok((input, ()))
+    }
+}
+
 pub fn parse(input: &[u8]) -> IResult<&[u8], Ospfv2Packet> {
+    validate_checksum(input)?;
     let (input, packet) = Ospfv2Packet::parse_be(input)?;
     Ok((input, packet))
 }

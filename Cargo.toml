@@ -25,6 +25,7 @@ include = [
 bitfield-struct = "0.9"
 byteorder = "1.5"
 bytes = "1.9"
+internet-checksum = "0.2.1"
 ipnet = "2.10"
 nom = "7"
 nom-derive = "0.10"
