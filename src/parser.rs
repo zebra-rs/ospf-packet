@@ -15,11 +15,11 @@ use crate::util::ParseBe;
 const OSPF_VERSION: u8 = 2;
 
 // OSPF packet types.
-const OSPF_HELLO: u8 = 1;
-const OSPF_DATABASE_DESC: u8 = 2;
-const OSPF_LINK_STATE_REQUEST: u8 = 3;
-const OSPF_LINK_STATE_UPDATE: u8 = 4;
-const OSPF_LINK_STATE_ACK: u8 = 5;
+pub const OSPF_HELLO: u8 = 1;
+pub const OSPF_DATABASE_DESC: u8 = 2;
+pub const OSPF_LINK_STATE_REQUEST: u8 = 3;
+pub const OSPF_LINK_STATE_UPDATE: u8 = 4;
+pub const OSPF_LINK_STATE_ACK: u8 = 5;
 
 // OSPF packet types.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, NomBE)]
