@@ -65,9 +65,13 @@ impl Display for OspfHello {
             self.options,
             self.router_priority,
             self.router_dead_interval,
-            self.designated_router,
-            self.backup_designated_router,
-        )
+            self.d_router,
+            self.bd_router,
+        )?;
+        for nei in self.neighbors.iter() {
+            write!(f, "\n Neighbor: {}", nei)?;
+        }
+        Ok(())
     }
 }
 

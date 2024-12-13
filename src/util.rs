@@ -19,7 +19,6 @@ impl ParseBe<Ipv4Addr> for Ipv4Addr {
 }
 
 // many0 which avoid passing empty input to the parser.
-#[allow(dead_code)]
 pub fn many0<'a, O, E: ParseError<&'a [u8]>>(
     parser: impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>,
 ) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Vec<O>, E> {
@@ -36,20 +35,3 @@ pub fn many0<'a, O, E: ParseError<&'a [u8]>>(
         Ok((remaining, res))
     }
 }
-
-// pub fn u8_3_u32(array: &[u8]) -> u32 {
-//     if array.len() < 3 {
-//         0
-//     } else {
-//         ((array[0] as u32) << 16) | ((array[1] as u32) << 8) | (array[2] as u32)
-//     }
-// }
-
-// pub fn u32_u8_3(value: u32) -> [u8; 3] {
-//     // Extract the three least significant bytes as big-endian
-//     [
-//         (value >> 16) as u8, // Most significant byte of the remaining 3 bytes
-//         (value >> 8) as u8,  // Middle byte
-//         value as u8,         // Least significant byte
-//     ]
-// }

@@ -17,6 +17,24 @@ pub fn parse_hello() {
 }
 
 #[test]
+pub fn parse_hello_with_neighbor() {
+    const PACKET: &[u8] = &hex!(
+        "
+        01 00 5e 00 00 05 00 1c 42 d3 17 49 08 00 45 c0
+        00 44 bb a1 00 00 01 59 11 f8 0b 00 00 03 e0 00
+        00 05 02 01 00 30 0b 00 00 03 00 00 00 00 d9 91
+        00 00 00 00 00 00 00 00 00 00 ff ff ff 00 00 0a
+        02 01 00 00 00 28 0b 00 00 01 0b 00 00 03 01 01
+        01 01
+        "
+    );
+    let (rem, packet) = parse(&PACKET[34..]).unwrap();
+    assert!(rem.is_empty());
+    println!("{}", packet);
+    println!("rem len: {:?}", rem.len());
+}
+
+#[test]
 pub fn parse_db_desc() {
     const PACKET: &[u8] = &hex!(
         "

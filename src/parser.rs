@@ -9,7 +9,7 @@ use nom::number::complete::{be_u24, be_u64, be_u8};
 use nom::{Err, IResult};
 use nom_derive::*;
 
-use crate::util::ParseBe;
+use crate::util::{many0, ParseBe};
 
 // OSPF version.
 const OSPF_VERSION: u8 = 2;
@@ -133,6 +133,10 @@ impl Ospfv2Payload {
     }
 }
 
+pub fn parse_ipv4addr_vec(input: &[u8]) -> IResult<&[u8], Vec<Ipv4Addr>> {
+    many0(Ipv4Addr::parse_be)(input)
+}
+
 #[derive(Debug, NomBE)]
 pub struct OspfHello {
     pub network_mask: Ipv4Addr,
@@ -141,8 +145,10 @@ pub struct OspfHello {
     pub options: HelloOption,
     pub router_priority: u8,
     pub router_dead_interval: u32,
-    pub designated_router: Ipv4Addr,
-    pub backup_designated_router: Ipv4Addr,
+    pub d_router: Ipv4Addr,
+    pub bd_router: Ipv4Addr,
+    #[nom(Parse = "parse_ipv4addr_vec")]
+    pub neighbors: Vec<Ipv4Addr>,
 }
 
 #[bitfield(u8, debug = true)]
@@ -165,8 +171,9 @@ impl Default for OspfHello {
             options: HelloOption(0),
             router_priority: 0,
             router_dead_interval: 0,
-            designated_router: Ipv4Addr::UNSPECIFIED,
-            backup_designated_router: Ipv4Addr::UNSPECIFIED,
+            d_router: Ipv4Addr::UNSPECIFIED,
+            bd_router: Ipv4Addr::UNSPECIFIED,
+            neighbors: Vec::new(),
         }
     }
 }
@@ -178,8 +185,8 @@ impl OspfHello {
         buf.put_u8(self.options.into());
         buf.put_u8(self.router_priority);
         buf.put_u32(self.router_dead_interval);
-        buf.put(&self.designated_router.octets()[..]);
-        buf.put(&self.backup_designated_router.octets()[..]);
+        buf.put(&self.d_router.octets()[..]);
+        buf.put(&self.bd_router.octets()[..]);
     }
 }
 
