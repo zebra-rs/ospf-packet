@@ -63,7 +63,7 @@ impl Display for OspfHello {
             self.network_mask,
             self.hello_interval,
             self.options,
-            self.router_priority,
+            self.priority,
             self.router_dead_interval,
             self.d_router,
             self.bd_router,

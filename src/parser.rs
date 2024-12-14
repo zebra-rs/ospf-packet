@@ -143,7 +143,7 @@ pub struct OspfHello {
     pub hello_interval: u16,
     #[nom(Map = "|x: u8| x.into()", Parse = "be_u8")]
     pub options: HelloOption,
-    pub router_priority: u8,
+    pub priority: u8,
     pub router_dead_interval: u32,
     pub d_router: Ipv4Addr,
     pub bd_router: Ipv4Addr,
@@ -169,7 +169,7 @@ impl Default for OspfHello {
             network_mask: Ipv4Addr::UNSPECIFIED,
             hello_interval: 0,
             options: HelloOption(0),
-            router_priority: 0,
+            priority: 0,
             router_dead_interval: 0,
             d_router: Ipv4Addr::UNSPECIFIED,
             bd_router: Ipv4Addr::UNSPECIFIED,
@@ -183,10 +183,13 @@ impl OspfHello {
         buf.put(&self.network_mask.octets()[..]);
         buf.put_u16(self.hello_interval);
         buf.put_u8(self.options.into());
-        buf.put_u8(self.router_priority);
+        buf.put_u8(self.priority);
         buf.put_u32(self.router_dead_interval);
         buf.put(&self.d_router.octets()[..]);
         buf.put(&self.bd_router.octets()[..]);
+        for nbr in self.neighbors.iter() {
+            buf.put(&nbr.octets()[..]);
+        }
     }
 }
 
