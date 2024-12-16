@@ -200,7 +200,7 @@ pub struct OspfDbDesc {
     pub options: OspfOptions,
     #[nom(Map = "|x: u8| x.into()", Parse = "be_u8")]
     pub flags: DbDescFlags,
-    pub dd_seq_number: u32,
+    pub seqnum: u32,
     pub lsa_headers: Vec<OspfLsaHeader>,
 }
 
@@ -212,6 +212,12 @@ pub struct DbDescFlags {
     pub oob_resync: bool,
     #[bits(4)]
     pub resvd: u32,
+}
+
+impl DbDescFlags {
+    pub fn is_all(&self) -> bool {
+        self.master() && self.more() && self.init()
+    }
 }
 
 #[derive(Debug, NomBE)]

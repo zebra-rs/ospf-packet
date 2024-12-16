@@ -84,7 +84,7 @@ impl Display for OspfDbDesc {
  Options: {:?}
  Flags: {:?}
  DD sequence number: {}"#,
-            self.if_mtu, self.options, self.flags, self.dd_seq_number,
+            self.if_mtu, self.options, self.flags, self.seqnum,
         )?;
         for lsa in self.lsa_headers.iter() {
             write!(f, "\n{}", lsa)?;
