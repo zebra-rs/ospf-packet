@@ -81,8 +81,8 @@ impl Display for OspfDbDesc {
             f,
             r#"== Database Description ==
  Interface MTU: {}
- Options: {}
- Flags: {}
+ Options: {:?}
+ Flags: {:?}
  DD sequence number: {}"#,
             self.if_mtu, self.options, self.flags, self.dd_seq_number,
         )?;

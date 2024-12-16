@@ -142,7 +142,7 @@ pub struct OspfHello {
     pub network_mask: Ipv4Addr,
     pub hello_interval: u16,
     #[nom(Map = "|x: u8| x.into()", Parse = "be_u8")]
-    pub options: HelloOption,
+    pub options: OspfOptions,
     pub priority: u8,
     pub router_dead_interval: u32,
     pub d_router: Ipv4Addr,
@@ -152,7 +152,7 @@ pub struct OspfHello {
 }
 
 #[bitfield(u8, debug = true)]
-pub struct HelloOption {
+pub struct OspfOptions {
     pub multi_toplogy: bool,
     pub external: bool,
     pub multicast: bool,
@@ -168,7 +168,7 @@ impl Default for OspfHello {
         Self {
             network_mask: Ipv4Addr::UNSPECIFIED,
             hello_interval: 0,
-            options: HelloOption(0),
+            options: OspfOptions(0),
             priority: 0,
             router_dead_interval: 0,
             d_router: Ipv4Addr::UNSPECIFIED,
@@ -196,10 +196,22 @@ impl OspfHello {
 #[derive(Debug, NomBE)]
 pub struct OspfDbDesc {
     pub if_mtu: u16,
-    pub options: u8,
-    pub flags: u8,
+    #[nom(Map = "|x: u8| x.into()", Parse = "be_u8")]
+    pub options: OspfOptions,
+    #[nom(Map = "|x: u8| x.into()", Parse = "be_u8")]
+    pub flags: DbDescFlags,
     pub dd_seq_number: u32,
     pub lsa_headers: Vec<OspfLsaHeader>,
+}
+
+#[bitfield(u8, debug = true)]
+pub struct DbDescFlags {
+    pub master: bool,
+    pub more: bool,
+    pub init: bool,
+    pub oob_resync: bool,
+    #[bits(4)]
+    pub resvd: u32,
 }
 
 #[derive(Debug, NomBE)]
