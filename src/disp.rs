@@ -81,10 +81,23 @@ impl Display for OspfDbDesc {
             f,
             r#"== Database Description ==
  Interface MTU: {}
- Options: {:?}
- Flags: {:?}
+ Options: multi:{}, external:{}, multicast:{}, nssa:{}, lls:{}, demand:{}, o:{}, dn:{}
+ Flags: master:{}, more:{}, init:{}, oob:{}
  DD sequence number: {}"#,
-            self.if_mtu, self.options, self.flags, self.seqnum,
+            self.if_mtu,
+            self.options.multi_toplogy() as u8,
+            self.options.external() as u8,
+            self.options.multicast() as u8,
+            self.options.nssa() as u8,
+            self.options.lls_data() as u8,
+            self.options.demand_circuts() as u8,
+            self.options.o() as u8,
+            self.options.dn() as u8,
+            self.flags.master() as u8,
+            self.flags.more() as u8,
+            self.flags.init() as u8,
+            self.flags.oob_resync() as u8,
+            self.seqnum,
         )?;
         for lsa in self.lsa_headers.iter() {
             write!(f, "\n{}", lsa)?;
