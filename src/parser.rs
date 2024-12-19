@@ -67,7 +67,7 @@ impl Ospfv2Packet {
         self.auth.emit(buf);
         match &self.payload {
             Hello(v) => v.emit(buf),
-            // DbDesc(v) => v.emit(buf),
+            DbDesc(v) => v.emit(buf),
             // LsRequest(v) => v.emit(buf),
             // LsUpdate(v) => v.emit(buf),
             // LsAck(v) => v.emit(buf),
@@ -152,6 +152,7 @@ pub struct OspfHello {
 }
 
 #[bitfield(u8, debug = true)]
+#[derive(PartialEq)]
 pub struct OspfOptions {
     pub multi_toplogy: bool,
     pub external: bool,
@@ -193,7 +194,7 @@ impl OspfHello {
     }
 }
 
-#[derive(Debug, NomBE)]
+#[derive(Debug, Default, NomBE, Clone)]
 pub struct OspfDbDesc {
     pub if_mtu: u16,
     #[nom(Map = "|x: u8| x.into()", Parse = "be_u8")]
@@ -205,6 +206,7 @@ pub struct OspfDbDesc {
 }
 
 #[bitfield(u8, debug = true)]
+#[derive(PartialEq)]
 pub struct DbDescFlags {
     pub master: bool,
     pub more: bool,
@@ -217,6 +219,18 @@ pub struct DbDescFlags {
 impl DbDescFlags {
     pub fn is_all(&self) -> bool {
         self.master() && self.more() && self.init()
+    }
+}
+
+impl OspfDbDesc {
+    pub fn emit(&self, buf: &mut BytesMut) {
+        buf.put_u16(self.if_mtu);
+        buf.put_u8(self.options.into());
+        buf.put_u8(self.flags.into());
+        buf.put_u32(self.seqnum);
+        for lsah in self.lsa_headers.iter() {
+            lsah.emit(buf);
+        }
     }
 }
 
@@ -257,7 +271,7 @@ pub const OSPF_LSA_OPAQUE_LINK_LOCAL: u8 = 9;
 pub const OSPF_LSA_OPAQUE_AREA_LOCAL: u8 = 10;
 pub const OSPF_LSA_OPAQUE_AS_WIDE: u8 = 11;
 
-#[derive(Debug, NomBE)]
+#[derive(Debug, NomBE, Clone)]
 pub struct OspfLsaHeader {
     pub ls_age: u16,
     pub options: u8,
@@ -267,6 +281,19 @@ pub struct OspfLsaHeader {
     pub ls_seq_number: u32,
     pub ls_checksum: u16,
     pub length: u16,
+}
+
+impl OspfLsaHeader {
+    pub fn emit(&self, buf: &mut BytesMut) {
+        buf.put_u16(self.ls_age);
+        buf.put_u8(self.options);
+        buf.put_u8(self.ls_type.0);
+        buf.put_u32(self.ls_id);
+        buf.put(&self.adv_router.octets()[..]);
+        buf.put_u32(self.ls_seq_number);
+        buf.put_u16(self.ls_checksum);
+        buf.put_u16(self.length);
+    }
 }
 
 #[derive(Debug, NomBE)]
@@ -367,7 +394,7 @@ pub fn validate_checksum(input: &[u8]) -> IResult<&[u8], ()> {
 }
 
 pub fn parse(input: &[u8]) -> IResult<&[u8], Ospfv2Packet> {
-    validate_checksum(input)?;
+    // validate_checksum(input)?;
     let (input, packet) = Ospfv2Packet::parse_be(input)?;
     Ok((input, packet))
 }

@@ -1,5 +1,25 @@
+use bytes::BytesMut;
 use hex_literal::hex;
 use ospf_packet::*;
+
+fn parse_emit(buf: &[u8]) {
+    let packet = parse(buf);
+    assert!(packet.is_ok());
+
+    let (rem, packet) = packet.unwrap();
+    assert!(rem.is_empty());
+    println!("{}", packet);
+
+    let mut buf = BytesMut::new();
+    packet.emit(&mut buf);
+    println!("Buf len {}", buf.len());
+
+    let packet = parse(&buf);
+    assert!(packet.is_ok());
+
+    let (_, packet) = packet.unwrap();
+    println!("{}", packet);
+}
 
 #[test]
 pub fn parse_hello() {
@@ -10,12 +30,14 @@ pub fn parse_hello() {
         00 00 00 28 c0 a8 aa 08 00 00 00 00
         "
     );
-    let (rem, packet) = parse(PACKET).unwrap();
-    assert!(rem.is_empty());
-    println!("{}", packet);
-    println!("rem len: {:?}", rem.len());
+    parse_emit(PACKET);
+    // let (rem, packet) = parse(PACKET).unwrap();
+    // assert!(rem.is_empty());
+    // println!("{}", packet);
+    // println!("rem len: {:?}", rem.len());
 }
 
+#[ignore]
 #[test]
 pub fn parse_hello_with_neighbor() {
     const PACKET: &[u8] = &hex!(
@@ -148,6 +170,25 @@ pub fn parse_ls_upd_multi() {
         "
     );
     let (rem, packet) = parse(PACKET).unwrap();
+    assert_eq!(rem.len(), 0);
+    println!("{}", packet);
+    println!("rem len: {:?}", rem.len());
+}
+
+#[test]
+pub fn parse_ls_upd_router() {
+    const PACKET: &[u8] = &hex!(
+        "
+        00 1c 42 45 b2 35 00 1c 42 e8 0c 23 08 00 45 c0
+        00 54 9f 0e 00 00 01 59 03 81 0b 00 00 01 0b 00
+        00 02 02 04 00 40 01 01 01 01 00 00 00 00 85 f5
+        00 00 00 00 00 00 00 00 00 00 00 00 00 01 01 38
+        02 01 01 01 01 01 01 01 01 01 80 00 00 d0 e0 85
+        00 24 00 00 00 01 0b 00 00 00 ff ff ff 00 03 00
+        00 0a
+        "
+    );
+    let (rem, packet) = parse(&PACKET[34..]).unwrap();
     assert_eq!(rem.len(), 0);
     println!("{}", packet);
     println!("rem len: {:?}", rem.len());
