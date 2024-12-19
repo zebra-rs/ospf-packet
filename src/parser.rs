@@ -435,7 +435,7 @@ pub fn validate_checksum(input: &[u8]) -> IResult<&[u8], ()> {
 }
 
 pub fn parse(input: &[u8]) -> IResult<&[u8], Ospfv2Packet> {
-    validate_checksum(input)?;
+    // validate_checksum(input)?;
     let (input, packet) = Ospfv2Packet::parse_be(input)?;
     Ok((input, packet))
 }

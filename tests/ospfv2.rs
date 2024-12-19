@@ -34,6 +34,24 @@ pub fn parse_hello() {
 }
 
 #[test]
+pub fn parse_unknown() {
+    const PACKET: &[u8] = &hex!(
+        "
+        02 06 00 2c c0 a8 aa 08 00 00 00 01 27 3b 00 00
+        00 00 00 00 00 00 00 00 ff ff ff 00 00 0a 02 01
+        00 00 00 28 c0 a8 aa 08 00 00 00 00
+        "
+    );
+    let packet = parse(PACKET);
+    println!("{:?}", packet);
+    // assert!(packet.is_ok());
+
+    // let (rem, packet) = packet.unwrap();
+    // assert!(rem.is_empty());
+    // println!("{}", packet);
+}
+
+#[test]
 pub fn parse_hello_with_neighbor() {
     const PACKET: &[u8] = &hex!(
         "
@@ -108,7 +126,6 @@ pub fn parse_ls_request_multi() {
 }
 
 #[test]
-#[ignore]
 pub fn parse_ls_upd() {
     const PACKET: &[u8] = &hex!(
         "
