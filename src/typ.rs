@@ -4,8 +4,9 @@ use nom::number::complete::be_u8;
 use nom::IResult;
 use nom_derive::*;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum OspfType {
+    #[default]
     Hello,
     DbDesc,
     LsRequest,
@@ -58,7 +59,7 @@ impl From<u8> for OspfType {
 }
 
 impl OspfType {
-    pub fn parse(input: &[u8]) -> IResult<&[u8], Self> {
+    pub fn parse_be(input: &[u8]) -> IResult<&[u8], Self> {
         let (input, typ) = be_u8(input)?;
         let ospf_type: Self = typ.into();
         Ok((input, ospf_type))

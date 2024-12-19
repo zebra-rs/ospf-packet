@@ -18,7 +18,6 @@ const OSPF_VERSION: u8 = 2;
 #[derive(Debug, NomBE)]
 pub struct Ospfv2Packet {
     pub version: u8,
-    #[nom(Parse = "OspfType::parse")]
     pub typ: OspfType,
     pub len: u16,
     pub router_id: Ipv4Addr,
@@ -27,7 +26,7 @@ pub struct Ospfv2Packet {
     pub auth_type: u16,
     #[nom(Parse = "{ |x| Ospfv2Auth::parse_be(x, auth_type) }")]
     pub auth: Ospfv2Auth,
-    #[nom(Parse = "{ |x| Ospfv2Payload::parse_be(x, typ) }")]
+    #[nom(Parse = "{ |x| Ospfv2Payload::parse_enum(x, typ) }")]
     pub payload: Ospfv2Payload,
 }
 
@@ -114,15 +113,22 @@ pub enum Ospfv2Payload {
     Unknown(OspfUnknown),
 }
 
-#[derive(Debug)]
-pub struct OspfUnknown {
-    pub typ: u8,
+// Wrapper to handle unknown.
+impl Ospfv2Payload {
+    pub fn parse_enum(input: &[u8], typ: OspfType) -> IResult<&[u8], Ospfv2Payload> {
+        let (input, mut payload) = Ospfv2Payload::parse_be(input, typ)?;
+        if let Ospfv2Payload::Unknown(ref mut v) = payload {
+            v.typ = typ;
+        }
+        Ok((input, payload))
+    }
 }
 
-impl OspfUnknown {
-    pub fn parse_be(input: &[u8]) -> IResult<&[u8], OspfUnknown> {
-        Err(Err::Error(make_error(input, ErrorKind::Verify)))
-    }
+#[derive(Debug, NomBE)]
+pub struct OspfUnknown {
+    #[nom(Ignore)]
+    pub typ: OspfType,
+    pub payload: Vec<u8>,
 }
 
 impl Ospfv2Payload {
