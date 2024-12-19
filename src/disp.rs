@@ -17,7 +17,7 @@ impl Display for Ospfv2Packet {
  Auth: {}
 {}"#,
             self.version,
-            self.typ.0,
+            self.typ,
             self.len,
             self.router_id,
             self.area_id,

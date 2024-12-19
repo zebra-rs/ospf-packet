@@ -9,26 +9,17 @@ use nom::number::complete::{be_u24, be_u64, be_u8};
 use nom::{Err, IResult};
 use nom_derive::*;
 
-use crate::util::{many0, Emit, ParseBe};
+use super::util::{many0, Emit, ParseBe};
+use super::OspfType;
 
 // OSPF version.
 const OSPF_VERSION: u8 = 2;
 
-// OSPF packet types.
-pub const OSPF_HELLO: u8 = 1;
-pub const OSPF_DATABASE_DESC: u8 = 2;
-pub const OSPF_LINK_STATE_REQUEST: u8 = 3;
-pub const OSPF_LINK_STATE_UPDATE: u8 = 4;
-pub const OSPF_LINK_STATE_ACK: u8 = 5;
-
-// OSPF packet types.
-#[derive(Debug, PartialEq, Eq, Clone, Copy, NomBE)]
-pub struct OspfPacketType(pub u8);
-
 #[derive(Debug, NomBE)]
 pub struct Ospfv2Packet {
     pub version: u8,
-    pub typ: OspfPacketType,
+    #[nom(Parse = "OspfType::parse")]
+    pub typ: OspfType,
     pub len: u16,
     pub router_id: Ipv4Addr,
     pub area_id: Ipv4Addr,
@@ -44,7 +35,7 @@ impl Ospfv2Packet {
     pub fn new(router_id: &Ipv4Addr, area_id: &Ipv4Addr, payload: Ospfv2Payload) -> Self {
         Self {
             version: OSPF_VERSION,
-            typ: OspfPacketType(payload.typ()),
+            typ: payload.typ(),
             len: 0,
             router_id: *router_id,
             area_id: *area_id,
@@ -58,7 +49,7 @@ impl Ospfv2Packet {
     pub fn emit(&self, buf: &mut BytesMut) {
         use Ospfv2Payload::*;
         buf.put_u8(self.version);
-        buf.put_u8(self.typ.0);
+        buf.put_u8(self.typ.into());
         buf.put_u16(self.len);
         buf.put(&self.router_id.octets()[..]);
         buf.put(&self.area_id.octets()[..]);
@@ -107,29 +98,43 @@ impl Emit for Ospfv2Auth {
 }
 
 #[derive(Debug, NomBE)]
-#[nom(Selector = "OspfPacketType")]
+#[nom(Selector = "OspfType")]
 pub enum Ospfv2Payload {
-    #[nom(Selector = "OspfPacketType(OSPF_HELLO)")]
+    #[nom(Selector = "OspfType::Hello")]
     Hello(OspfHello),
-    #[nom(Selector = "OspfPacketType(OSPF_DATABASE_DESC)")]
+    #[nom(Selector = "OspfType::DbDesc")]
     DbDesc(OspfDbDesc),
-    #[nom(Selector = "OspfPacketType(OSPF_LINK_STATE_REQUEST)")]
+    #[nom(Selector = "OspfType::LsRequest")]
     LsRequest(OspfLsRequest),
-    #[nom(Selector = "OspfPacketType(OSPF_LINK_STATE_UPDATE)")]
+    #[nom(Selector = "OspfType::LsUpdate")]
     LsUpdate(OspfLsUpdate),
-    #[nom(Selector = "OspfPacketType(OSPF_LINK_STATE_ACK)")]
+    #[nom(Selector = "OspfType::LsAck")]
     LsAck(OspfLsAck),
+    #[nom(Selector = "_")]
+    Unknown(OspfUnknown),
+}
+
+#[derive(Debug)]
+pub struct OspfUnknown {
+    pub typ: u8,
+}
+
+impl OspfUnknown {
+    pub fn parse_be(input: &[u8]) -> IResult<&[u8], OspfUnknown> {
+        Err(Err::Error(make_error(input, ErrorKind::Verify)))
+    }
 }
 
 impl Ospfv2Payload {
-    pub fn typ(&self) -> u8 {
+    pub fn typ(&self) -> OspfType {
         use Ospfv2Payload::*;
         match self {
-            Hello(_) => OSPF_HELLO,
-            DbDesc(_) => OSPF_DATABASE_DESC,
-            LsRequest(_) => OSPF_LINK_STATE_REQUEST,
-            LsUpdate(_) => OSPF_LINK_STATE_UPDATE,
-            LsAck(_) => OSPF_LINK_STATE_ACK,
+            Hello(_) => OspfType::Hello,
+            DbDesc(_) => OspfType::DbDesc,
+            LsRequest(_) => OspfType::LsRequest,
+            LsUpdate(_) => OspfType::LsUpdate,
+            LsAck(_) => OspfType::LsAck,
+            Unknown(_v) => OspfType::Hello,
         }
     }
 }
