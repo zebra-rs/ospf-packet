@@ -31,13 +31,8 @@ pub fn parse_hello() {
         "
     );
     parse_emit(PACKET);
-    // let (rem, packet) = parse(PACKET).unwrap();
-    // assert!(rem.is_empty());
-    // println!("{}", packet);
-    // println!("rem len: {:?}", rem.len());
 }
 
-#[ignore]
 #[test]
 pub fn parse_hello_with_neighbor() {
     const PACKET: &[u8] = &hex!(
@@ -50,10 +45,7 @@ pub fn parse_hello_with_neighbor() {
         01 01
         "
     );
-    let (rem, packet) = parse(&PACKET[34..]).unwrap();
-    assert!(rem.is_empty());
-    println!("{}", packet);
-    println!("rem len: {:?}", rem.len());
+    parse_emit(&PACKET[34..]);
 }
 
 #[test]
@@ -64,10 +56,7 @@ pub fn parse_db_desc() {
         00 00 00 00 00 00 00 00 05 dc 02 07 41 77 a9 7e
         "
     );
-    let (rem, packet) = parse(PACKET).unwrap();
-    assert!(rem.is_empty());
-    println!("{}", packet);
-    println!("rem len: {:?}", rem.len());
+    parse_emit(PACKET);
 }
 
 #[test]
@@ -87,10 +76,7 @@ pub fn parse_db_desc_lsa() {
         c0 a8 aa 02 80 00 00 01 33 41 00 24
         "
     );
-    let (rem, packet) = parse(PACKET).unwrap();
-    assert!(rem.is_empty());
-    println!("{}", packet);
-    println!("rem len: {:?}", rem.len());
+    parse_emit(PACKET);
 }
 
 #[test]
@@ -102,10 +88,7 @@ pub fn parse_ls_request() {
         c0 a8 aa 08
         "
     );
-    let (rem, packet) = parse(PACKET).unwrap();
-    assert!(rem.is_empty());
-    println!("{}", packet);
-    println!("rem len: {:?}", rem.len());
+    parse_emit(PACKET);
 }
 
 #[test]
@@ -121,10 +104,7 @@ pub fn parse_ls_request_multi() {
         00 00 00 05 c0 a8 ac 00 c0 a8 aa 02
         "
     );
-    let (rem, packet) = parse(PACKET).unwrap();
-    assert!(rem.is_empty());
-    println!("{}", packet);
-    println!("rem len: {:?}", rem.len());
+    parse_emit(PACKET);
 }
 
 #[test]

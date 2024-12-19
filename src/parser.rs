@@ -9,7 +9,7 @@ use nom::number::complete::{be_u24, be_u64, be_u8};
 use nom::{Err, IResult};
 use nom_derive::*;
 
-use crate::util::{many0, ParseBe};
+use crate::util::{many0, Emit, ParseBe};
 
 // OSPF version.
 const OSPF_VERSION: u8 = 2;
@@ -62,14 +62,14 @@ impl Ospfv2Packet {
         buf.put_u16(self.len);
         buf.put(&self.router_id.octets()[..]);
         buf.put(&self.area_id.octets()[..]);
-        buf.put_u16(self.checksum);
+        buf.put_u16(0);
         buf.put_u16(self.auth_type);
         self.auth.emit(buf);
         match &self.payload {
             Hello(v) => v.emit(buf),
             DbDesc(v) => v.emit(buf),
-            // LsRequest(v) => v.emit(buf),
-            // LsUpdate(v) => v.emit(buf),
+            LsRequest(v) => v.emit(buf),
+            LsUpdate(v) => v.emit(buf),
             // LsAck(v) => v.emit(buf),
             _ => {}
         }
@@ -92,15 +92,16 @@ pub struct Ospfv2Auth {
 
 impl Ospfv2Auth {
     pub fn parse_be(input: &[u8], auth_type: u16) -> IResult<&[u8], Self> {
-        // XXX only handle auth_type is zero.
         if auth_type != 0 {
             return Err(Err::Error(make_error(input, ErrorKind::Tag)));
         }
         let (input, auth) = be_u64(input)?;
         Ok((input, Self { auth }))
     }
+}
 
-    pub fn emit(&self, buf: &mut BytesMut) {
+impl Emit for Ospfv2Auth {
+    fn emit(&self, buf: &mut BytesMut) {
         buf.put_u64(self.auth);
     }
 }
@@ -235,15 +236,31 @@ impl OspfDbDesc {
 }
 
 #[derive(Debug, NomBE)]
+pub struct OspfLsRequest {
+    pub reqs: Vec<OspfLsRequestEntry>,
+}
+
+#[derive(Debug, NomBE)]
 pub struct OspfLsRequestEntry {
     pub ls_type: u32,
     pub ls_id: u32,
     pub adv_router: Ipv4Addr,
 }
 
-#[derive(Debug, NomBE)]
-pub struct OspfLsRequest {
-    pub reqs: Vec<OspfLsRequestEntry>,
+impl OspfLsRequest {
+    pub fn emit(&self, buf: &mut BytesMut) {
+        for req in self.reqs.iter() {
+            req.emit(buf);
+        }
+    }
+}
+
+impl OspfLsRequestEntry {
+    pub fn emit(&self, buf: &mut BytesMut) {
+        buf.put_u32(self.ls_type);
+        buf.put_u32(self.ls_id);
+        buf.put(&self.adv_router.octets()[..]);
+    }
 }
 
 #[derive(Debug, NomBE)]
@@ -251,6 +268,15 @@ pub struct OspfLsUpdate {
     pub num_adv: u32,
     #[nom(Count = "num_adv")]
     pub lsas: Vec<OspfLsa>,
+}
+
+impl OspfLsUpdate {
+    pub fn emit(&self, buf: &mut BytesMut) {
+        buf.put_u32(self.num_adv);
+        for lsa in self.lsas.iter() {
+            lsa.emit(buf);
+        }
+    }
 }
 
 #[derive(Debug, NomBE)]
@@ -303,6 +329,12 @@ pub struct OspfLsa {
     pub lsa: OspfLsaPayload,
 }
 
+impl Emit for OspfLsa {
+    fn emit(&self, buf: &mut BytesMut) {
+        self.h.emit(buf);
+    }
+}
+
 #[derive(Debug, NomBE)]
 #[nom(Selector = "OspfLsType")]
 pub enum OspfLsaPayload {
@@ -324,7 +356,6 @@ pub enum OspfLsaPayload {
 
 impl OspfLsaPayload {
     pub fn parse_lsa(input: &[u8], typ: OspfLsType) -> IResult<&[u8], Self> {
-        println!("XX LSA Type {:?}", typ.0);
         OspfLsaPayload::parse_be(input, typ)
     }
 }
@@ -386,7 +417,6 @@ pub fn validate_checksum(input: &[u8]) -> IResult<&[u8], ()> {
     cksum.add_bytes(&input[0..AUTH_RANGE.start]);
     cksum.add_bytes(&input[AUTH_RANGE.end..]);
     if cksum.checksum() != [0; 2] {
-        println!("Error {:?}", cksum.checksum());
         Err(Err::Error(make_error(input, ErrorKind::Verify)))
     } else {
         Ok((input, ()))
@@ -394,7 +424,7 @@ pub fn validate_checksum(input: &[u8]) -> IResult<&[u8], ()> {
 }
 
 pub fn parse(input: &[u8]) -> IResult<&[u8], Ospfv2Packet> {
-    // validate_checksum(input)?;
+    validate_checksum(input)?;
     let (input, packet) = Ospfv2Packet::parse_be(input)?;
     Ok((input, packet))
 }
