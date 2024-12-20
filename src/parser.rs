@@ -10,7 +10,7 @@ use nom::{Err, IResult};
 use nom_derive::*;
 
 use super::util::{many0, Emit, ParseBe};
-use super::OspfType;
+use super::{OspfLsType, OspfType};
 
 // OSPF version.
 const OSPF_VERSION: u8 = 2;
@@ -295,8 +295,8 @@ pub struct OspfLsAck {
     pub lsa_headers: Vec<OspfLsaHeader>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, NomBE)]
-pub struct OspfLsType(pub u8);
+// #[derive(Debug, PartialEq, Eq, Clone, Copy, NomBE)]
+// pub struct OspfLsType(pub u8);
 
 pub const OSPF_LSA_ROUTER: u8 = 1;
 pub const OSPF_LSA_NETWORK: u8 = 2;
@@ -324,7 +324,7 @@ impl OspfLsaHeader {
     pub fn emit(&self, buf: &mut BytesMut) {
         buf.put_u16(self.ls_age);
         buf.put_u8(self.options);
-        buf.put_u8(self.ls_type.0);
+        buf.put_u8(self.ls_type.into());
         buf.put_u32(self.ls_id);
         buf.put(&self.adv_router.octets()[..]);
         buf.put_u32(self.ls_seq_number);
@@ -349,19 +349,19 @@ impl Emit for OspfLsa {
 #[derive(Debug, NomBE)]
 #[nom(Selector = "OspfLsType")]
 pub enum OspfLsaPayload {
-    #[nom(Selector = "OspfLsType(OSPF_LSA_ROUTER)")]
+    #[nom(Selector = "OspfLsType::Router")]
     Router(RouterLsa),
-    #[nom(Selector = "OspfLsType(OSPF_LSA_NETWORK)")]
+    #[nom(Selector = "OspfLsType::Network")]
     Network(NetworkLsa),
     // Summary(SummaryLsa),
     // SummaryAsbr(SummaryAsbrLsa),
-    #[nom(Selector = "OspfLsType(OSPF_LSA_AS_EXTERNAL)")]
+    #[nom(Selector = "OspfLsType::AsExternal")]
     AsExternal(AsExternalLsa),
     // NssaAsExternal(NssaAsExternalLsa),
     // OpaqueLink(OpaqueLinkLsa),
     // OpaqueArea(OpaqueAreaLsa),
     // OpaqueAs(OpaqueAsLsa),
-    #[nom(Selector = "OspfLsType(_)")]
+    #[nom(Selector = "_")]
     Unknown(UnknownLsa),
 }
 

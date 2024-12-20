@@ -120,7 +120,7 @@ impl Display for OspfLsaHeader {
   Length: {}"#,
             self.ls_age,
             self.options,
-            self.ls_type.0,
+            self.ls_type,
             self.ls_id,
             self.adv_router,
             self.ls_seq_number,

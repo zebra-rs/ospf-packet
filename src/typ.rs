@@ -4,14 +4,15 @@ use nom::number::complete::be_u8;
 use nom::IResult;
 use nom_derive::*;
 
+#[repr(u8)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum OspfType {
     #[default]
-    Hello,
-    DbDesc,
-    LsRequest,
-    LsUpdate,
-    LsAck,
+    Hello = 1,
+    DbDesc = 2,
+    LsRequest = 3,
+    LsUpdate = 4,
+    LsAck = 5,
     Unknown(u8),
 }
 
