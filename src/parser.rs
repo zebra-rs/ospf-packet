@@ -295,19 +295,6 @@ pub struct OspfLsAck {
     pub lsa_headers: Vec<OspfLsaHeader>,
 }
 
-// #[derive(Debug, PartialEq, Eq, Clone, Copy, NomBE)]
-// pub struct OspfLsType(pub u8);
-
-pub const OSPF_LSA_ROUTER: u8 = 1;
-pub const OSPF_LSA_NETWORK: u8 = 2;
-pub const OSPF_LSA_SUMMARY_NETWORK: u8 = 3;
-pub const OSPF_LSA_SUMMARY_ASBR: u8 = 4;
-pub const OSPF_LSA_AS_EXTERNAL: u8 = 5;
-pub const OSPF_LSA_NSSA_AS_EXTERNAL: u8 = 7;
-pub const OSPF_LSA_OPAQUE_LINK_LOCAL: u8 = 9;
-pub const OSPF_LSA_OPAQUE_AREA_LOCAL: u8 = 10;
-pub const OSPF_LSA_OPAQUE_AS_WIDE: u8 = 11;
-
 #[derive(Debug, NomBE, Clone)]
 pub struct OspfLsaHeader {
     pub ls_age: u16,
