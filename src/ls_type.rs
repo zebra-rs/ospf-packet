@@ -10,7 +10,7 @@ pub enum OspfLsType {
     #[default]
     Router = 1,
     Network = 2,
-    SummaryNetwork = 3,
+    Summary = 3,
     SummaryAsbr = 4,
     AsExternal = 5,
     NssaAsExternal = 7,
@@ -26,7 +26,7 @@ impl Display for OspfLsType {
         let str = match self {
             Router => "Router",
             Network => "Network",
-            SummaryNetwork => "Summary Network",
+            Summary => "Summary",
             SummaryAsbr => "Summary ASBR",
             AsExternal => "AS External",
             NssaAsExternal => "NSSA AS External",
@@ -45,7 +45,7 @@ impl From<OspfLsType> for u8 {
         match typ {
             Router => 1,
             Network => 2,
-            SummaryNetwork => 3,
+            Summary => 3,
             SummaryAsbr => 4,
             AsExternal => 5,
             NssaAsExternal => 7,
@@ -63,7 +63,7 @@ impl From<u8> for OspfLsType {
         match typ {
             1 => Router,
             2 => Network,
-            3 => SummaryNetwork,
+            3 => Summary,
             4 => SummaryAsbr,
             5 => AsExternal,
             7 => NssaAsExternal,

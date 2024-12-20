@@ -60,7 +60,7 @@ impl Ospfv2Packet {
             DbDesc(v) => v.emit(buf),
             LsRequest(v) => v.emit(buf),
             LsUpdate(v) => v.emit(buf),
-            // LsAck(v) => v.emit(buf),
+            LsAck(v) => v.emit(buf),
             _ => {}
         }
         // OSPF packet length.
@@ -151,7 +151,7 @@ pub fn parse_ipv4addr_vec(input: &[u8]) -> IResult<&[u8], Vec<Ipv4Addr>> {
 
 #[derive(Debug, NomBE)]
 pub struct OspfHello {
-    pub network_mask: Ipv4Addr,
+    pub netmask: Ipv4Addr,
     pub hello_interval: u16,
     #[nom(Map = "|x: u8| x.into()", Parse = "be_u8")]
     pub options: OspfOptions,
@@ -179,7 +179,7 @@ pub struct OspfOptions {
 impl Default for OspfHello {
     fn default() -> Self {
         Self {
-            network_mask: Ipv4Addr::UNSPECIFIED,
+            netmask: Ipv4Addr::UNSPECIFIED,
             hello_interval: 0,
             options: OspfOptions(0),
             priority: 0,
@@ -193,7 +193,7 @@ impl Default for OspfHello {
 
 impl OspfHello {
     pub fn emit(&self, buf: &mut BytesMut) {
-        buf.put(&self.network_mask.octets()[..]);
+        buf.put(&self.netmask.octets()[..]);
         buf.put_u16(self.hello_interval);
         buf.put_u8(self.options.into());
         buf.put_u8(self.priority);
@@ -295,6 +295,14 @@ pub struct OspfLsAck {
     pub lsa_headers: Vec<OspfLsaHeader>,
 }
 
+impl Emit for OspfLsAck {
+    fn emit(&self, buf: &mut BytesMut) {
+        for h in self.lsa_headers.iter() {
+            h.emit(buf);
+        }
+    }
+}
+
 #[derive(Debug, NomBE, Clone)]
 pub struct OspfLsaHeader {
     pub ls_age: u16,
@@ -340,8 +348,10 @@ pub enum OspfLsaPayload {
     Router(RouterLsa),
     #[nom(Selector = "OspfLsType::Network")]
     Network(NetworkLsa),
-    // Summary(SummaryLsa),
-    // SummaryAsbr(SummaryAsbrLsa),
+    #[nom(Selector = "OspfLsType::Summary")]
+    Summary(SummaryLsa),
+    #[nom(Selector = "OspfLsType::SummaryAsbr")]
+    SummaryAsbr(SummaryLsa),
     #[nom(Selector = "OspfLsType::AsExternal")]
     AsExternal(AsExternalLsa),
     // NssaAsExternal(NssaAsExternalLsa),
@@ -389,13 +399,30 @@ pub struct RouterLsaLink {
 
 #[derive(Debug, NomBE)]
 pub struct NetworkLsa {
-    pub network_mask: Ipv4Addr,
-    pub attached_routers: Vec<u32>,
+    pub netmask: Ipv4Addr,
+    #[nom(Parse = "parse_ipv4addr_vec")]
+    pub attached_routers: Vec<Ipv4Addr>,
+}
+
+#[derive(Debug, NomBE)]
+pub struct SummaryLsa {
+    pub netmask: Ipv4Addr,
+    pub tos: u8,
+    #[nom(Parse = "be_u24")]
+    pub metric: u32,
+    pub tos_routes: Vec<OspfTosRoute>,
+}
+
+#[derive(Debug, NomBE)]
+pub struct OspfTosRoute {
+    pub tos: u8,
+    #[nom(Parse = "be_u24")]
+    pub metric: u32,
 }
 
 #[derive(Debug, NomBE)]
 pub struct AsExternalLsa {
-    pub network_mask: Ipv4Addr,
+    pub netmask: Ipv4Addr,
     pub ext_and_resvd: u8,
     #[nom(Parse = "be_u24")]
     pub metric: u32,

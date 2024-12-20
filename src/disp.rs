@@ -60,7 +60,7 @@ impl Display for OspfHello {
  Router dead interval: {}
  DR: {}
  BDR: {}"#,
-            self.network_mask,
+            self.netmask,
             self.hello_interval,
             self.options,
             self.priority,
@@ -176,6 +176,7 @@ impl Display for OspfLsa {
             Network(v) => write!(f, "\n{}", v),
             AsExternal(v) => write!(f, "\n{}", v),
             Unknown(_v) => write!(f, "Unknown"),
+            _ => write!(f, ""),
         }
     }
 }
@@ -223,7 +224,7 @@ impl Display for NetworkLsa {
             f,
             r#"== Network LSA ==
   Netmask: {}"#,
-            self.network_mask
+            self.netmask
         )?;
         // for link in self.links.iter() {
         //     write!(f, "\n{}", link)?;
