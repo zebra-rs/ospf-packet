@@ -354,7 +354,8 @@ pub enum OspfLsaPayload {
     SummaryAsbr(SummaryLsa),
     #[nom(Selector = "OspfLsType::AsExternal")]
     AsExternal(AsExternalLsa),
-    // NssaAsExternal(NssaAsExternalLsa),
+    #[nom(Selector = "OspfLsType::NssaAsExternal")]
+    NssaAsExternal(NssaAsExternalLsa),
     // OpaqueLink(OpaqueLinkLsa),
     // OpaqueArea(OpaqueAreaLsa),
     // OpaqueAs(OpaqueAsLsa),
@@ -410,11 +411,11 @@ pub struct SummaryLsa {
     pub tos: u8,
     #[nom(Parse = "be_u24")]
     pub metric: u32,
-    pub tos_routes: Vec<OspfTosRoute>,
+    pub tos_routes: Vec<TosRoute>,
 }
 
 #[derive(Debug, NomBE)]
-pub struct OspfTosRoute {
+pub struct TosRoute {
     pub tos: u8,
     #[nom(Parse = "be_u24")]
     pub metric: u32,
@@ -427,6 +428,27 @@ pub struct AsExternalLsa {
     #[nom(Parse = "be_u24")]
     pub metric: u32,
     pub forwarding_address: Ipv4Addr,
+    pub external_route_tag: u32,
+    pub tos_list: Vec<ExternalTosRoute>,
+}
+
+#[derive(Debug, NomBE)]
+pub struct NssaAsExternalLsa {
+    pub netmask: Ipv4Addr,
+    pub ext_and_tos: u8,
+    #[nom(Parse = "be_u24")]
+    pub metric: u32,
+    pub forwarding_address: Ipv4Addr,
+    pub external_route_tag: u32,
+    pub tos_list: Vec<ExternalTosRoute>,
+}
+
+#[derive(Debug, NomBE)]
+pub struct ExternalTosRoute {
+    pub tos: u8,
+    #[nom(Parse = "be_u24")]
+    pub metric: u32,
+    pub forwarding_address: u32,
     pub external_route_tag: u32,
 }
 
