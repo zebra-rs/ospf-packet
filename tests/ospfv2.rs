@@ -1,5 +1,6 @@
 use bytes::BytesMut;
 use hex_literal::hex;
+use nom_derive::Parse;
 use ospf_packet::*;
 
 fn parse_emit(buf: &[u8]) {
@@ -235,5 +236,20 @@ pub fn parse_lsa_type7() {
     let (rem, packet) = parse(PACKET).unwrap();
     assert!(rem.is_empty());
     println!("{}", packet);
+    println!("rem len: {:?}", rem.len());
+}
+
+#[test]
+pub fn parse_unknown2() {
+    const PACKET: &[u8] = &hex!(
+        "
+        00 66 28 07 ac 10 00 00 02 02 02 02 80 00 00 01
+        63 ac 00 24 ff ff ff fc 80 00 00 64 c0 a8 0a 01
+        00 00 00 00
+        "
+    );
+    let (rem, packet) = UnknownLsa::parse_be(PACKET).unwrap();
+    assert!(rem.is_empty());
+    println!("{:?}", packet);
     println!("rem len: {:?}", rem.len());
 }
