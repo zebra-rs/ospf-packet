@@ -149,6 +149,22 @@ pub fn parse_ipv4addr_vec(input: &[u8]) -> IResult<&[u8], Vec<Ipv4Addr>> {
     many0(Ipv4Addr::parse_be)(input)
 }
 
+pub fn parse_tos_routes(input: &[u8]) -> IResult<&[u8], Vec<TosRoute>> {
+    many0(TosRoute::parse_be)(input)
+}
+
+pub fn parse_external_tos_routes(input: &[u8]) -> IResult<&[u8], Vec<ExternalTosRoute>> {
+    many0(ExternalTosRoute::parse_be)(input)
+}
+
+pub fn parse_router_links(input: &[u8]) -> IResult<&[u8], Vec<RouterLsaLink>> {
+    many0(RouterLsaLink::parse_be)(input)
+}
+
+pub fn parse_router_tos_routes(input: &[u8]) -> IResult<&[u8], Vec<OspfRouterTOS>> {
+    many0(OspfRouterTOS::parse_be)(input)
+}
+
 #[derive(Debug, NomBE)]
 pub struct OspfHello {
     pub netmask: Ipv4Addr,
@@ -331,7 +347,7 @@ impl OspfLsaHeader {
 #[derive(Debug, NomBE)]
 pub struct OspfLsa {
     pub h: OspfLsaHeader,
-    #[nom(Parse = "{ |x| OspfLsaPayload::parse_lsa(x, h.ls_type) }")]
+    #[nom(Parse = "{ |x| OspfLsaPayload::parse_lsa_with_length(x, h.ls_type, h.length) }")]
     pub lsa: OspfLsaPayload,
 }
 
@@ -367,6 +383,27 @@ impl OspfLsaPayload {
     pub fn parse_lsa(input: &[u8], typ: OspfLsType) -> IResult<&[u8], Self> {
         OspfLsaPayload::parse_be(input, typ)
     }
+    
+    pub fn parse_lsa_with_length(input: &[u8], typ: OspfLsType, total_length: u16) -> IResult<&[u8], Self> {
+        use nom::bytes::complete::take;
+        
+        // LSA header is 20 bytes, so payload length is total_length - 20
+        let payload_length = total_length.saturating_sub(20) as usize;
+        
+        // Take exactly payload_length bytes from input
+        let (remaining_input, payload_input) = take(payload_length)(input)?;
+        
+        // Try to parse the payload within the exact byte boundary
+        match OspfLsaPayload::parse_be(payload_input, typ) {
+            Ok((_, parsed_payload)) => Ok((remaining_input, parsed_payload)),
+            Err(_) => {
+                // If parsing fails, treat it as unknown LSA
+                Ok((remaining_input, OspfLsaPayload::Unknown(UnknownLsa { 
+                    data: payload_input.to_vec() 
+                })))
+            }
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, NomBE)]
@@ -383,7 +420,7 @@ pub struct OspfRouterTOS {
 pub struct RouterLsa {
     pub flags: u16,
     pub num_links: u16,
-    #[nom(Count = "num_links")]
+    #[nom(Parse = "parse_router_links")]
     pub links: Vec<RouterLsaLink>,
 }
 
@@ -394,7 +431,7 @@ pub struct RouterLsaLink {
     pub link_type: OspfRouterLinkType,
     pub num_tos: u8,
     pub tos_0_metric: u16,
-    #[nom(Count = "num_tos")]
+    #[nom(Parse = "parse_router_tos_routes")]
     pub toses: Vec<OspfRouterTOS>,
 }
 
@@ -411,6 +448,7 @@ pub struct SummaryLsa {
     pub tos: u8,
     #[nom(Parse = "be_u24")]
     pub metric: u32,
+    #[nom(Parse = "parse_tos_routes")]
     pub tos_routes: Vec<TosRoute>,
 }
 
@@ -429,6 +467,7 @@ pub struct AsExternalLsa {
     pub metric: u32,
     pub forwarding_address: Ipv4Addr,
     pub external_route_tag: u32,
+    #[nom(Parse = "parse_external_tos_routes")]
     pub tos_list: Vec<ExternalTosRoute>,
 }
 
@@ -440,6 +479,7 @@ pub struct NssaAsExternalLsa {
     pub metric: u32,
     pub forwarding_address: Ipv4Addr,
     pub external_route_tag: u32,
+    #[nom(Parse = "parse_external_tos_routes")]
     pub tos_list: Vec<ExternalTosRoute>,
 }
 
