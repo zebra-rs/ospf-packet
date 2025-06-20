@@ -32,9 +32,21 @@ pub fn many0<'a, O, E: ParseError<&'a [u8]>>(
         let mut remaining = input;
 
         while !remaining.is_empty() {
-            let (new_input, value) = parser(remaining)?;
-            remaining = new_input;
-            res.push(value);
+            match parser(remaining) {
+                Ok((new_input, value)) => {
+                    remaining = new_input;
+                    res.push(value);
+                }
+                Err(Err::Incomplete(_)) => {
+                    // In many0, if we encounter incomplete data, we stop and return what we have
+                    break;
+                }
+                Err(_) => {
+                    // For other errors, we also stop and return what we have
+                    // This is the expected behavior for many0
+                    break;
+                }
+            }
         }
 
         Ok((remaining, res))
