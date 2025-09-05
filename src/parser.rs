@@ -187,7 +187,7 @@ pub struct OspfOptions {
     pub multicast: bool,
     pub nssa: bool,
     pub lls_data: bool,
-    pub demand_circuts: bool,
+    pub demand_circuits: bool,
     pub o: bool,
     pub dn: bool,
 }
@@ -383,24 +383,31 @@ impl OspfLsaPayload {
     pub fn parse_lsa(input: &[u8], typ: OspfLsType) -> IResult<&[u8], Self> {
         OspfLsaPayload::parse_be(input, typ)
     }
-    
-    pub fn parse_lsa_with_length(input: &[u8], typ: OspfLsType, total_length: u16) -> IResult<&[u8], Self> {
+
+    pub fn parse_lsa_with_length(
+        input: &[u8],
+        typ: OspfLsType,
+        total_length: u16,
+    ) -> IResult<&[u8], Self> {
         use nom::bytes::complete::take;
-        
+
         // LSA header is 20 bytes, so payload length is total_length - 20
         let payload_length = total_length.saturating_sub(20) as usize;
-        
+
         // Take exactly payload_length bytes from input
         let (remaining_input, payload_input) = take(payload_length)(input)?;
-        
+
         // Try to parse the payload within the exact byte boundary
         match OspfLsaPayload::parse_be(payload_input, typ) {
             Ok((_, parsed_payload)) => Ok((remaining_input, parsed_payload)),
             Err(_) => {
                 // If parsing fails, treat it as unknown LSA
-                Ok((remaining_input, OspfLsaPayload::Unknown(UnknownLsa { 
-                    data: payload_input.to_vec() 
-                })))
+                Ok((
+                    remaining_input,
+                    OspfLsaPayload::Unknown(UnknownLsa {
+                        data: payload_input.to_vec(),
+                    }),
+                ))
             }
         }
     }

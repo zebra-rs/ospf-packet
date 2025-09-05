@@ -55,7 +55,7 @@ impl Display for OspfHello {
             r#"== Hello ==
  Network mask: {}
  Hello interval: {}
- Options: {:?}
+ Options: {}
  Router priority: {}
  Router dead interval: {}
  DR: {}
@@ -75,24 +75,43 @@ impl Display for OspfHello {
     }
 }
 
+impl Display for OspfOptions {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(
+            f,
+            r#"
+  DN: {}
+  O: {}
+  Demand Circuit: {}
+  LLS Data: {}
+  NSSA: {}
+  Multicast: {}
+  External: {}
+  MultiTopology: {}"#,
+            if self.dn() { "On" } else { "Off" },
+            if self.o() { "On" } else { "Off" },
+            if self.demand_circuits() { "On" } else { "Off" },
+            if self.lls_data() { "On" } else { "Off" },
+            if self.nssa() { "On" } else { "Off" },
+            if self.multicast() { "On" } else { "Off" },
+            if self.external() { "On" } else { "Off" },
+            if self.multi_toplogy() { "On" } else { "Off" },
+        )?;
+        Ok(())
+    }
+}
+
 impl Display for OspfDbDesc {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(
             f,
             r#"== Database Description ==
  Interface MTU: {}
- Options: multi:{}, external:{}, multicast:{}, nssa:{}, lls:{}, demand:{}, o:{}, dn:{}
+ Options: {}
  Flags: master:{}, more:{}, init:{}, oob:{}
  DD sequence number: {}"#,
             self.if_mtu,
-            self.options.multi_toplogy() as u8,
-            self.options.external() as u8,
-            self.options.multicast() as u8,
-            self.options.nssa() as u8,
-            self.options.lls_data() as u8,
-            self.options.demand_circuts() as u8,
-            self.options.o() as u8,
-            self.options.dn() as u8,
+            self.options,
             self.flags.master() as u8,
             self.flags.more() as u8,
             self.flags.init() as u8,
