@@ -109,7 +109,7 @@ impl Display for OspfDbDesc {
  Interface MTU: {}
  Options: {}
  Flags: master:{}, more:{}, init:{}, oob:{}
- DD sequence number: {}"#,
+ DD sequence number: {:04x}"#,
             self.if_mtu,
             self.options,
             self.flags.master() as u8,
@@ -132,7 +132,7 @@ impl Display for OspfLsaHeader {
             r#" LS age: {}
   Options: {}
   LS Type: {}
-  LS ID: {:x}
+  LS ID: {}
   Advertising router: {}
   LS seq num: {:x}
   LS checksu: {:?}

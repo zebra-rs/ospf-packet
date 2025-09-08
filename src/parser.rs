@@ -270,7 +270,7 @@ pub struct OspfLsRequest {
 #[derive(Debug, NomBE)]
 pub struct OspfLsRequestEntry {
     pub ls_type: u32,
-    pub ls_id: u32,
+    pub ls_id: Ipv4Addr,
     pub adv_router: Ipv4Addr,
 }
 
@@ -285,7 +285,7 @@ impl OspfLsRequest {
 impl OspfLsRequestEntry {
     pub fn emit(&self, buf: &mut BytesMut) {
         buf.put_u32(self.ls_type);
-        buf.put_u32(self.ls_id);
+        buf.put(&self.ls_id.octets()[..]);
         buf.put(&self.adv_router.octets()[..]);
     }
 }
@@ -324,7 +324,7 @@ pub struct OspfLsaHeader {
     pub ls_age: u16,
     pub options: u8,
     pub ls_type: OspfLsType,
-    pub ls_id: u32,
+    pub ls_id: Ipv4Addr,
     pub adv_router: Ipv4Addr,
     pub ls_seq_number: u32,
     pub ls_checksum: u16,
@@ -332,11 +332,24 @@ pub struct OspfLsaHeader {
 }
 
 impl OspfLsaHeader {
+    pub fn new(ls_type: OspfLsType, ls_id: Ipv4Addr, adv_router: Ipv4Addr) -> Self {
+        Self {
+            ls_age: 0,
+            options: 0,
+            ls_type,
+            ls_id,
+            adv_router,
+            ls_seq_number: 0,
+            ls_checksum: 0,
+            length: 0,
+        }
+    }
+
     pub fn emit(&self, buf: &mut BytesMut) {
         buf.put_u16(self.ls_age);
         buf.put_u8(self.options);
         buf.put_u8(self.ls_type.into());
-        buf.put_u32(self.ls_id);
+        buf.put(&self.ls_id.octets()[..]);
         buf.put(&self.adv_router.octets()[..]);
         buf.put_u32(self.ls_seq_number);
         buf.put_u16(self.ls_checksum);
@@ -423,7 +436,7 @@ pub struct OspfRouterTOS {
     pub metric: u16,
 }
 
-#[derive(Debug, NomBE)]
+#[derive(Debug, NomBE, Default)]
 pub struct RouterLsa {
     pub flags: u16,
     pub num_links: u16,
