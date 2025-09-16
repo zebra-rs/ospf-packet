@@ -267,7 +267,7 @@ pub struct OspfLsRequest {
     pub reqs: Vec<OspfLsRequestEntry>,
 }
 
-#[derive(Debug, NomBE)]
+#[derive(Debug, NomBE, PartialOrd, Ord, PartialEq, Eq)]
 pub struct OspfLsRequestEntry {
     pub ls_type: u32,
     pub ls_id: Ipv4Addr,
@@ -283,6 +283,14 @@ impl OspfLsRequest {
 }
 
 impl OspfLsRequestEntry {
+    pub fn new(ls_type: OspfLsType, ls_id: Ipv4Addr, adv_router: Ipv4Addr) -> Self {
+        Self {
+            ls_type: ls_type.into(),
+            ls_id,
+            adv_router,
+        }
+    }
+
     pub fn emit(&self, buf: &mut BytesMut) {
         buf.put_u32(self.ls_type);
         buf.put(&self.ls_id.octets()[..]);
