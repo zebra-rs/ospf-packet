@@ -57,6 +57,13 @@ impl From<OspfLsType> for u8 {
     }
 }
 
+impl From<OspfLsType> for u32 {
+    fn from(typ: OspfLsType) -> Self {
+        let val: u8 = typ.into();
+        val as u32
+    }
+}
+
 impl From<u8> for OspfLsType {
     fn from(typ: u8) -> Self {
         use OspfLsType::*;

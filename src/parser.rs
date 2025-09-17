@@ -187,7 +187,7 @@ pub struct OspfOptions {
     pub multicast: bool,
     pub nssa: bool,
     pub lls_data: bool,
-    pub demand_circuts: bool,
+    pub demand_circuits: bool,
     pub o: bool,
     pub dn: bool,
 }
@@ -267,10 +267,10 @@ pub struct OspfLsRequest {
     pub reqs: Vec<OspfLsRequestEntry>,
 }
 
-#[derive(Debug, NomBE)]
+#[derive(Debug, NomBE, PartialOrd, Ord, PartialEq, Eq)]
 pub struct OspfLsRequestEntry {
     pub ls_type: u32,
-    pub ls_id: u32,
+    pub ls_id: Ipv4Addr,
     pub adv_router: Ipv4Addr,
 }
 
@@ -283,9 +283,17 @@ impl OspfLsRequest {
 }
 
 impl OspfLsRequestEntry {
+    pub fn new(ls_type: OspfLsType, ls_id: Ipv4Addr, adv_router: Ipv4Addr) -> Self {
+        Self {
+            ls_type: ls_type.into(),
+            ls_id,
+            adv_router,
+        }
+    }
+
     pub fn emit(&self, buf: &mut BytesMut) {
         buf.put_u32(self.ls_type);
-        buf.put_u32(self.ls_id);
+        buf.put(&self.ls_id.octets()[..]);
         buf.put(&self.adv_router.octets()[..]);
     }
 }
@@ -324,7 +332,7 @@ pub struct OspfLsaHeader {
     pub ls_age: u16,
     pub options: u8,
     pub ls_type: OspfLsType,
-    pub ls_id: u32,
+    pub ls_id: Ipv4Addr,
     pub adv_router: Ipv4Addr,
     pub ls_seq_number: u32,
     pub ls_checksum: u16,
@@ -332,11 +340,24 @@ pub struct OspfLsaHeader {
 }
 
 impl OspfLsaHeader {
+    pub fn new(ls_type: OspfLsType, ls_id: Ipv4Addr, adv_router: Ipv4Addr) -> Self {
+        Self {
+            ls_age: 0,
+            options: 0,
+            ls_type,
+            ls_id,
+            adv_router,
+            ls_seq_number: 0,
+            ls_checksum: 0,
+            length: 0,
+        }
+    }
+
     pub fn emit(&self, buf: &mut BytesMut) {
         buf.put_u16(self.ls_age);
         buf.put_u8(self.options);
         buf.put_u8(self.ls_type.into());
-        buf.put_u32(self.ls_id);
+        buf.put(&self.ls_id.octets()[..]);
         buf.put(&self.adv_router.octets()[..]);
         buf.put_u32(self.ls_seq_number);
         buf.put_u16(self.ls_checksum);
@@ -383,24 +404,31 @@ impl OspfLsaPayload {
     pub fn parse_lsa(input: &[u8], typ: OspfLsType) -> IResult<&[u8], Self> {
         OspfLsaPayload::parse_be(input, typ)
     }
-    
-    pub fn parse_lsa_with_length(input: &[u8], typ: OspfLsType, total_length: u16) -> IResult<&[u8], Self> {
+
+    pub fn parse_lsa_with_length(
+        input: &[u8],
+        typ: OspfLsType,
+        total_length: u16,
+    ) -> IResult<&[u8], Self> {
         use nom::bytes::complete::take;
-        
+
         // LSA header is 20 bytes, so payload length is total_length - 20
         let payload_length = total_length.saturating_sub(20) as usize;
-        
+
         // Take exactly payload_length bytes from input
         let (remaining_input, payload_input) = take(payload_length)(input)?;
-        
+
         // Try to parse the payload within the exact byte boundary
         match OspfLsaPayload::parse_be(payload_input, typ) {
             Ok((_, parsed_payload)) => Ok((remaining_input, parsed_payload)),
             Err(_) => {
                 // If parsing fails, treat it as unknown LSA
-                Ok((remaining_input, OspfLsaPayload::Unknown(UnknownLsa { 
-                    data: payload_input.to_vec() 
-                })))
+                Ok((
+                    remaining_input,
+                    OspfLsaPayload::Unknown(UnknownLsa {
+                        data: payload_input.to_vec(),
+                    }),
+                ))
             }
         }
     }
@@ -416,7 +444,7 @@ pub struct OspfRouterTOS {
     pub metric: u16,
 }
 
-#[derive(Debug, NomBE)]
+#[derive(Debug, NomBE, Default)]
 pub struct RouterLsa {
     pub flags: u16,
     pub num_links: u16,
