@@ -4,6 +4,7 @@ use bitfield_struct::bitfield;
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{BufMut, BytesMut};
 use internet_checksum::Checksum;
+use ipnet::Ipv4Net;
 use nom::error::{make_error, ErrorKind};
 use nom::number::complete::{be_u24, be_u64, be_u8};
 use nom::{Err, IResult};
@@ -434,8 +435,17 @@ impl OspfLsaPayload {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, NomBE)]
-pub struct OspfRouterLinkType(pub u8);
+#[repr(u8)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum OspfLinkType {
+    P2p = 1,
+    Transit = 2,
+    Stub = 3,
+    Virtual = 4,
+}
+
+// #[derive(Debug, PartialEq, Eq, Clone, Copy, NomBE)]
+// pub struct OspfRouterLinkType(pub u8);
 
 #[derive(Debug, NomBE)]
 pub struct OspfRouterTOS {
@@ -456,11 +466,24 @@ pub struct RouterLsa {
 pub struct RouterLsaLink {
     pub link_id: Ipv4Addr,
     pub link_data: Ipv4Addr,
-    pub link_type: OspfRouterLinkType,
+    pub link_type: u8,
     pub num_tos: u8,
     pub tos_0_metric: u16,
     #[nom(Parse = "parse_router_tos_routes")]
     pub toses: Vec<OspfRouterTOS>,
+}
+
+impl RouterLsaLink {
+    pub fn new(prefix: Ipv4Net, metric: u16) -> Self {
+        Self {
+            link_id: prefix.addr(),
+            link_data: prefix.netmask(),
+            link_type: OspfLinkType::Stub as u8,
+            num_tos: 0,
+            tos_0_metric: metric,
+            toses: vec![],
+        }
+    }
 }
 
 #[derive(Debug, NomBE)]
