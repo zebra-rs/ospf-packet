@@ -229,7 +229,7 @@ impl Display for RouterLsaLink {
  ToS: {:?}"#,
             self.link_id,
             self.link_data,
-            self.link_type.0,
+            self.link_type,
             self.num_tos,
             self.tos_0_metric,
             self.toses
